@@ -27,9 +27,10 @@ public class Server {
 	byte[] send_string_data = new byte[1024];
 	History chat_history = null;
 
+	//simulates a server on the terminal
 	public Server(int port) 
 	{
-
+		//creates a set of keys and client names that should be given access to server.
 		ConnectedClients client_connected = new ConnectedClients();
 		client_connected.addSecretKey("A", "1234");
 		client_connected.addSecretKey("B", "1234");
@@ -52,60 +53,60 @@ public class Server {
 		int nextPort = port + 1;
 		Random random = new Random(System.nanoTime());
 
-		while (true) 
+		while (true) //infintely run the server so it doesnt close
 		{
 			try 
 			{
-				// Receive the next packet
+				// Receive the next packet  from a client
 				DatagramPacket packet_reciver = new DatagramPacket(string_data_reciver, string_data_reciver.length);
 				socket_server.receive(packet_reciver);
-				String string_data = new String(packet_reciver.getData()).trim();
+				String string_data = new String(packet_reciver.getData()).trim(); //turn the packet data insto a string object
 
-				String output = string_data;
+				String output = string_data; // base case output if the client data doesnt match expected output, jsut print the client data
 				byte[] outputBytes = null;
-				System.out.println("RECEIVED: " + string_data);
+				System.out.println("RECEIVED: " + string_data); //print the client data into the server side
 
 				// Parse the input
 				String[] string_dataArray = string_data.split("[(), ]+");
 				for (int a = 0; a < string_dataArray.length; a++) 
 				{
-					string_dataArray[a] = string_dataArray[a].trim().toUpperCase();
+					string_dataArray[a] = string_dataArray[a].trim().toUpperCase(); //format string_data to uppercase to avoid case issues
 				}
 
 				// Switch on the command
-				switch (string_dataArray[0]) {
-				case ("HELLO"):
+				switch (string_dataArray[0]) { // check first word from client to server
+				case ("HELLO"): //if that word is HELLO 
 					// string_dataArray[1] contains the clientID
-					String secretKey = client_connected.getSecretKey(string_dataArray[1]);
-					if (secretKey != null) 
+					String secretKey = client_connected.getSecretKey(string_dataArray[1]); //then the 2nd word should be client name
+					if (secretKey != null) //if that client who said HELLO is one of the connected clients
 					{
-						String ran = Integer.toString(random.nextInt(1000));
+						String ran = Integer.toString(random.nextInt(1000)); //pick a random integer between 0 and 1000
 						client_connected.addXRES(string_dataArray[1], A3(ran, secretKey));
 						client_connected.addCKA(string_dataArray[1], A8(ran, secretKey));
 						client_connected.addAvailable(string_dataArray[1], false);
-						System.out.println(ran + secretKey);
-						output = "CHALLENGE(" + ran + ")";
-						outputBytes = output.getBytes();
+						System.out.println(ran + secretKey); //print the random number and secret key to the server side
+						output = "CHALLENGE(" + ran + ")"; //set output to a CHALLENGE before sending it to client
+						outputBytes = output.getBytes(); // store output as bytes
 					}
 					else {
-						System.out.println("ERROR: client not in the list of clients");
-						output = "ERROR: Not on client list";
-						outputBytes = output.getBytes();
+						System.out.println("ERROR: client not in the list of clients"); // client is not A, B, C, or D
+						output = "ERROR: Not on client list"; //tell client this message
+						outputBytes = output.getBytes(); //store output as bytes
 					}
 
 					break;
-				case ("RESPONSE"):
+				case ("RESPONSE"): //if the client sends command RESPONSE
 					// string_dataArray[1] contains the clientID
 					// string_dataArray[2] contains the RES
 
-					if (client_connected.getXRES(string_dataArray[1]).equals(string_dataArray[2])) {
+					if (client_connected.getXRES(string_dataArray[1]).equals(string_dataArray[2])) { // if the client responds with the correct answer then send a success message
 						client_connected.addPort(string_dataArray[1], nextPort);
 						TCPServerThread tcp = new TCPServerThread(nextPort, string_dataArray[1], client_connected,
 								chat_history);
 						Thread thread = new Thread(tcp);
 						thread.start();
 
-						output = "AUTH_SUCCESS(" + random.nextInt(1000) + ", " + nextPort++ + ")";
+						output = "AUTH_SUCCESS(" + random.nextInt(1000) + ", " + nextPort++ + ")"; //respond to the client with an AUTH_SUCCESS message
 						outputBytes = encrypt(output, client_connected.getCKA(string_dataArray[1]));
 					} 
 					else {
@@ -161,7 +162,7 @@ public class Server {
 
 	// Generate the encripted_ciphering key
 	// Generated Key needs to be 16 byte length
-	private byte[] A8(String ran, String string_key)
+	private byte[] A8(String ran, String string_key) // A8 function generates the encrypted key to be used later
 	{
 		String CK_A = ran + string_key;
 		MessageDigest messgae_digest = null;
